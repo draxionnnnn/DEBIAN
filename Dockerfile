@@ -47,10 +47,12 @@ RUN useradd -m -s /bin/bash user && \
     echo "user ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
 
 # ========== DOWNLOAD WALLPAPER ==========
-RUN mkdir -p /usr/share/backgrounds && \
+RUN mkdir -p /usr/share/backgrounds /home/user/Pictures && \
     curl -k -L -o /usr/share/backgrounds/draxion-rdp.png \
     "https://i.postimg.cc/2SMMW6Hd/Chat-GPT-Image-Sep-16-2026-07-21-05-PM.png" && \
-    chmod 644 /usr/share/backgrounds/draxion-rdp.png
+    cp /usr/share/backgrounds/draxion-rdp.png /home/user/Pictures/ && \
+    chmod 644 /usr/share/backgrounds/draxion-rdp.png && \
+    chown user:user /home/user/Pictures/draxion-rdp.png
 
 # ========== XFCE CONFIG ==========
 RUN mkdir -p /home/user/.config/xfce4/xfconf/xfce-perchannel-xml
@@ -97,20 +99,12 @@ RUN cat > /home/user/.config/xfce4/xfconf/xfce-perchannel-xml/xfce4-panel.xml <<
 </channel>
 EOF
 
-# Force wallpaper config (more complete)
 RUN cat > /home/user/.config/xfce4/xfconf/xfce-perchannel-xml/xfce4-desktop.xml << 'EOF'
 <?xml version="1.0" encoding="UTF-8"?>
 <channel name="xfce4-desktop" version="1.0">
   <property name="backdrop" type="empty">
     <property name="screen0" type="empty">
       <property name="monitor0" type="empty">
-        <property name="workspace0" type="empty">
-          <property name="color-style" type="int" value="0"/>
-          <property name="image-style" type="int" value="5"/>
-          <property name="last-image" type="string" value="/usr/share/backgrounds/draxion-rdp.png"/>
-        </property>
-      </property>
-      <property name="monitor1" type="empty">
         <property name="workspace0" type="empty">
           <property name="color-style" type="int" value="0"/>
           <property name="image-style" type="int" value="5"/>
@@ -159,15 +153,23 @@ EOF
 
 RUN chmod +x /home/user/Desktop/*.desktop
 
-# Also set wallpaper using xfconf (extra force)
+# Force wallpaper on every login
 RUN mkdir -p /home/user/.config/autostart && \
-    cat > /home/user/.config/autostart/set-wallpaper.desktop << 'EOF'
+    cat > /home/user/.config/autostart/force-wallpaper.sh << 'EOF'
+#!/bin/bash
+sleep 3
+xfconf-query -c xfce4-desktop -p /backdrop/screen0/monitor0/workspace0/last-image -s /usr/share/backgrounds/draxion-rdp.png
+xfconf-query -c xfce4-desktop -p /backdrop/screen0/monitor0/workspace0/image-style -s 5
+EOF
+
+RUN chmod +x /home/user/.config/autostart/force-wallpaper.sh && \
+    cat > /home/user/.config/autostart/force-wallpaper.desktop << 'EOF'
 [Desktop Entry]
 Type=Application
-Name=Set Wallpaper
-Exec=xfconf-query -c xfce4-desktop -p /backdrop/screen0/monitor0/workspace0/last-image -s /usr/share/backgrounds/draxion-rdp.png
+Name=Force Wallpaper
+Exec=/home/user/.config/autostart/force-wallpaper.sh
 Hidden=false
-NoDisplay=false
+NoDisplay=true
 X-GNOME-Autostart-enabled=true
 EOF
 
