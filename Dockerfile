@@ -12,6 +12,7 @@ RUN apt update && apt install -y \
     xrdp \
     xfce4 \
     xfce4-goodies \
+    xorgxrdp \
     dbus-x11 \
     sudo \
     curl \
