@@ -2,15 +2,16 @@ FROM debian:bullseye
 
 ENV DEBIAN_FRONTEND=noninteractive
 
+# Enable 32-bit architecture (required for wine)
 RUN dpkg --add-architecture i386
 
-# Correct sources for archived Bullseye (including security)
+# Correct sources for archived Bullseye
+# Note: debian-security is NOT yet on archive.debian.org → do NOT include it
 RUN printf 'deb http://archive.debian.org/debian bullseye main contrib non-free\n\
-deb http://archive.debian.org/debian bullseye-updates main contrib non-free\n\
-deb http://archive.debian.org/debian-security bullseye-security main contrib non-free\n' \
+deb http://archive.debian.org/debian bullseye-updates main contrib non-free\n' \
     > /etc/apt/sources.list
 
-# Optional but recommended for archive repos (avoids “Release file is not valid yet / expired” issues)
+# Required for archived repos (Release files have expired Valid-Until dates)
 RUN echo 'Acquire::Check-Valid-Until "false";' > /etc/apt/apt.conf.d/99no-check-valid-until
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
