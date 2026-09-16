@@ -2,10 +2,8 @@ FROM debian:bullseye
 
 ENV DEBIAN_FRONTEND=noninteractive
 
-# Enable 32-bit for wine
 RUN dpkg --add-architecture i386
 
-# Archived sources
 RUN printf 'deb http://archive.debian.org/debian bullseye main contrib non-free\n\
 deb http://archive.debian.org/debian bullseye-updates main contrib non-free\n' \
     > /etc/apt/sources.list
@@ -43,24 +41,21 @@ RUN apt-get update && \
         file-roller \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# Create user
 RUN useradd -m -s /bin/bash user && \
     echo "user:user" | chpasswd && \
     adduser user sudo && \
     echo "user ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
 
-# ========== DOWNLOAD YOUR CUSTOM WALLPAPER (with fallback) ==========
+# ========== WALLPAPER DOWNLOAD (FIXED) ==========
 RUN mkdir -p /usr/share/backgrounds && \
-    (wget --no-check-certificate -O /usr/share/backgrounds/draxion-rdp.png \
+    curl -k -L -o /usr/share/backgrounds/draxion-rdp.png \
     "https://i.postimg.cc/2SMMW6Hd/Chat-GPT-Image-Sep-16-2026-07-21-05-PM.png" || \
-     wget --no-check-certificate -O /usr/share/backgrounds/draxion-rdp.png \
-    "https://postimg.cc/4YvWkJRn") && \
+    curl -k -L -o /usr/share/backgrounds/draxion-rdp.png \
+    "https://postimg.cc/4YvWkJRn" && \
     chmod 644 /usr/share/backgrounds/draxion-rdp.png
 
-# ========== XFCE CONFIG ==========
 RUN mkdir -p /home/user/.config/xfce4/xfconf/xfce-perchannel-xml
 
-# Dark theme + icons
 RUN cat > /home/user/.config/xfce4/xfconf/xfce-perchannel-xml/xsettings.xml << 'EOF'
 <?xml version="1.0" encoding="UTF-8"?>
 <channel name="xsettings" version="1.0">
@@ -71,7 +66,6 @@ RUN cat > /home/user/.config/xfce4/xfconf/xfce-perchannel-xml/xsettings.xml << '
 </channel>
 EOF
 
-# Clean panel
 RUN cat > /home/user/.config/xfce4/xfconf/xfce-perchannel-xml/xfce4-panel.xml << 'EOF'
 <?xml version="1.0" encoding="UTF-8"?>
 <channel name="xfce4-panel" version="1.0">
@@ -104,7 +98,6 @@ RUN cat > /home/user/.config/xfce4/xfconf/xfce-perchannel-xml/xfce4-panel.xml <<
 </channel>
 EOF
 
-# Set the custom wallpaper
 RUN cat > /home/user/.config/xfce4/xfconf/xfce-perchannel-xml/xfce4-desktop.xml << 'EOF'
 <?xml version="1.0" encoding="UTF-8"?>
 <channel name="xfce4-desktop" version="1.0">
@@ -122,7 +115,6 @@ RUN cat > /home/user/.config/xfce4/xfconf/xfce-perchannel-xml/xfce4-desktop.xml 
 </channel>
 EOF
 
-# Disable compositor for better RDP performance
 RUN cat > /home/user/.config/xfce4/xfconf/xfce-perchannel-xml/xfwm4.xml << 'EOF'
 <?xml version="1.0" encoding="UTF-8"?>
 <channel name="xfwm4" version="1.0">
@@ -132,7 +124,6 @@ RUN cat > /home/user/.config/xfce4/xfconf/xfce-perchannel-xml/xfwm4.xml << 'EOF'
 </channel>
 EOF
 
-# Create Desktop shortcuts for Telegram + File Roller
 RUN mkdir -p /home/user/Desktop && \
     cat > /home/user/Desktop/Telegram.desktop << 'EOF'
 [Desktop Entry]
@@ -163,7 +154,6 @@ RUN chmod +x /home/user/Desktop/*.desktop && \
 
 RUN chown -R user:user /home/user/.config
 
-# XRDP settings
 RUN echo "startxfce4" > /home/user/.xsession && chmod +x /home/user/.xsession
 RUN echo "#!/bin/sh\nexec startxfce4" > /etc/xrdp/startwm.sh && chmod +x /etc/xrdp/startwm.sh
 RUN sed -i 's/^allowed_users=.*/allowed_users=anybody/' /etc/X11/Xwrapper.config || \
@@ -173,7 +163,6 @@ RUN sed -i 's/crypt_level=high/crypt_level=low/' /etc/xrdp/xrdp.ini && \
 RUN adduser xrdp ssl-cert
 RUN mkdir -p /var/run/dbus && dbus-uuidgen > /var/lib/dbus/machine-id
 
-# Startup
 RUN echo '#!/bin/bash\n\
 rm -f /var/run/xrdp/xrdp*.pid /var/run/xrdp-sesman.pid 2>/dev/null\n\
 /usr/sbin/xrdp-sesman\n\
