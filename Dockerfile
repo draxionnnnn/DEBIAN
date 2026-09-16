@@ -8,11 +8,14 @@ RUN printf 'deb http://archive.debian.org/debian bullseye main contrib non-free\
 deb http://archive.debian.org/debian bullseye-updates main contrib non-free\n' \
     > /etc/apt/sources.list
 
+# Install xserver-xorg-core FIRST so xorgxrdp can find its ABI dependencies
 RUN apt update && apt install -y \
+    xserver-xorg-core \
+    xserver-xorg-input-all \
     xrdp \
+    xorgxrdp \
     xfce4 \
     xfce4-goodies \
-    xorgxrdp \
     dbus-x11 \
     sudo \
     curl \
@@ -30,8 +33,8 @@ RUN echo "root:root" | chpasswd
 
 RUN echo "allowed_users=anybody" > /etc/X11/Xwrapper.config
 
-# --- CRITICAL: Fix startwm.sh to properly launch XFCE ---
-RUN printf '\nunset DBUS_SESSION_BUS_ADDRESS\nunset XDG_RUNTIME_DIR\nexec startxfce4\n' >> /etc/xrdp/startwm.sh && \
+# CRITICAL: Replace the whole startwm.sh with a clean script
+RUN printf '#!/bin/sh\nunset DBUS_SESSION_BUS_ADDRESS\nunset XDG_RUNTIME_DIR\nexec startxfce4\n' > /etc/xrdp/startwm.sh && \
     chmod +x /etc/xrdp/startwm.sh
 
 RUN mkdir -p /var/run/dbus && dbus-uuidgen > /var/lib/dbus/machine-id
