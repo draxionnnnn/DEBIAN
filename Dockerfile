@@ -39,6 +39,8 @@ RUN apt-get update && \
         arc-theme \
         python3-pil \
         fonts-dejavu-core \
+        unzip \
+        file-roller \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Create user
@@ -47,56 +49,11 @@ RUN useradd -m -s /bin/bash user && \
     adduser user sudo && \
     echo "user ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
 
-# ========== CREATE CUSTOM WALLPAPER "DRAXION RDP" ==========
-RUN python3 - << 'EOF'
-from PIL import Image, ImageDraw, ImageFont
-import os
-
-# Create dark gradient background
-width, height = 1920, 1080
-img = Image.new('RGB', (width, height), color=(12, 12, 18))
-draw = ImageDraw.Draw(img)
-
-# Soft purple/blue gradient effect
-for y in range(height):
-    r = int(12 + (y / height) * 18)
-    g = int(12 + (y / height) * 8)
-    b = int(28 + (y / height) * 35)
-    draw.line([(0, y), (width, y)], fill=(r, g, b))
-
-# Load font
-try:
-    font_big = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 92)
-    font_med = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 48)
-    font_small = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 32)
-except:
-    font_big = ImageFont.load_default()
-    font_med = ImageFont.load_default()
-    font_small = ImageFont.load_default()
-
-# Main title
-title = "DRAXION RDP"
-bbox = draw.textbbox((0, 0), title, font=font_big)
-tw = bbox[2] - bbox[0]
-draw.text(((width - tw) // 2, height // 2 - 120), title, fill=(180, 120, 255), font=font_big)
-
-# Telegram username
-tg = "@THEDRAXION"
-bbox = draw.textbbox((0, 0), tg, font=font_med)
-tw = bbox[2] - bbox[0]
-draw.text(((width - tw) // 2, height // 2 + 10), tg, fill=(100, 220, 255), font=font_med)
-
-# Small tagline
-tag = "OP WALLPAPER"
-bbox = draw.textbbox((0, 0), tag, font=font_small)
-tw = bbox[2] - bbox[0]
-draw.text(((width - tw) // 2, height // 2 + 90), tag, fill=(160, 160, 180), font=font_small)
-
-# Save wallpaper
-os.makedirs("/usr/share/backgrounds", exist_ok=True)
-img.save("/usr/share/backgrounds/draxion-rdp.png", "PNG")
-print("Wallpaper created successfully!")
-EOF
+# ========== DOWNLOAD YOUR CUSTOM WALLPAPER ==========
+RUN mkdir -p /usr/share/backgrounds && \
+    wget -O /usr/share/backgrounds/draxion-rdp.png \
+    "https://i.postimg.cc/2SMMW6Hd/Chat-GPT-Image-Sep-16-2026-07-21-05-PM.png" && \
+    chmod 644 /usr/share/backgrounds/draxion-rdp.png
 
 # ========== XFCE CONFIG ==========
 RUN mkdir -p /home/user/.config/xfce4/xfconf/xfce-perchannel-xml
@@ -173,18 +130,44 @@ RUN cat > /home/user/.config/xfce4/xfconf/xfce-perchannel-xml/xfwm4.xml << 'EOF'
 </channel>
 EOF
 
+# Create Desktop shortcuts for Telegram + File Roller
+RUN mkdir -p /home/user/Desktop && \
+    cat > /home/user/Desktop/Telegram.desktop << 'EOF'
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=Telegram
+Comment=Telegram Desktop
+Exec=telegram-desktop
+Icon=telegram
+Terminal=false
+Categories=Network;InstantMessaging;
+EOF
+
+RUN cat > /home/user/Desktop/Archive-Manager.desktop << 'EOF'
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=Archive Manager
+Comment=Extract ZIP and other archives
+Exec=file-roller
+Icon=file-roller
+Terminal=false
+Categories=Utility;Archiving;
+EOF
+
+RUN chmod +x /home/user/Desktop/*.desktop && \
+    chown -R user:user /home/user
+
 RUN chown -R user:user /home/user/.config
 
 # XRDP settings
 RUN echo "startxfce4" > /home/user/.xsession && chmod +x /home/user/.xsession
 RUN echo "#!/bin/sh\nexec startxfce4" > /etc/xrdp/startwm.sh && chmod +x /etc/xrdp/startwm.sh
-
 RUN sed -i 's/^allowed_users=.*/allowed_users=anybody/' /etc/X11/Xwrapper.config || \
     echo "allowed_users=anybody" >> /etc/X11/Xwrapper.config
-
 RUN sed -i 's/crypt_level=high/crypt_level=low/' /etc/xrdp/xrdp.ini && \
     sed -i 's/security_layer=negotiate/security_layer=rdp/' /etc/xrdp/xrdp.ini
-
 RUN adduser xrdp ssl-cert
 RUN mkdir -p /var/run/dbus && dbus-uuidgen > /var/lib/dbus/machine-id
 
