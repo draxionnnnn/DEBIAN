@@ -49,10 +49,12 @@ RUN useradd -m -s /bin/bash user && \
     adduser user sudo && \
     echo "user ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
 
-# ========== DOWNLOAD YOUR CUSTOM WALLPAPER ==========
+# ========== DOWNLOAD YOUR CUSTOM WALLPAPER (with fallback) ==========
 RUN mkdir -p /usr/share/backgrounds && \
-    wget --no-check-certificate -O /usr/share/backgrounds/draxion-rdp.png \
-    "https://i.postimg.cc/2SMMW6Hd/Chat-GPT-Image-Sep-16-2026-07-21-05-PM.png" && \
+    (wget --no-check-certificate -O /usr/share/backgrounds/draxion-rdp.png \
+    "https://i.postimg.cc/2SMMW6Hd/Chat-GPT-Image-Sep-16-2026-07-21-05-PM.png" || \
+     wget --no-check-certificate -O /usr/share/backgrounds/draxion-rdp.png \
+    "https://postimg.cc/4YvWkJRn") && \
     chmod 644 /usr/share/backgrounds/draxion-rdp.png
 
 # ========== XFCE CONFIG ==========
