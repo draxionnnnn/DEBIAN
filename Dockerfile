@@ -46,14 +46,13 @@ RUN useradd -m -s /bin/bash user && \
     adduser user sudo && \
     echo "user ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
 
-# ========== WALLPAPER DOWNLOAD (FIXED) ==========
+# ========== DOWNLOAD WALLPAPER ==========
 RUN mkdir -p /usr/share/backgrounds && \
     curl -k -L -o /usr/share/backgrounds/draxion-rdp.png \
-    "https://i.postimg.cc/2SMMW6Hd/Chat-GPT-Image-Sep-16-2026-07-21-05-PM.png" || \
-    curl -k -L -o /usr/share/backgrounds/draxion-rdp.png \
-    "https://postimg.cc/4YvWkJRn" && \
+    "https://i.postimg.cc/2SMMW6Hd/Chat-GPT-Image-Sep-16-2026-07-21-05-PM.png" && \
     chmod 644 /usr/share/backgrounds/draxion-rdp.png
 
+# ========== XFCE CONFIG ==========
 RUN mkdir -p /home/user/.config/xfce4/xfconf/xfce-perchannel-xml
 
 RUN cat > /home/user/.config/xfce4/xfconf/xfce-perchannel-xml/xsettings.xml << 'EOF'
@@ -98,12 +97,20 @@ RUN cat > /home/user/.config/xfce4/xfconf/xfce-perchannel-xml/xfce4-panel.xml <<
 </channel>
 EOF
 
+# Force wallpaper config (more complete)
 RUN cat > /home/user/.config/xfce4/xfconf/xfce-perchannel-xml/xfce4-desktop.xml << 'EOF'
 <?xml version="1.0" encoding="UTF-8"?>
 <channel name="xfce4-desktop" version="1.0">
   <property name="backdrop" type="empty">
     <property name="screen0" type="empty">
       <property name="monitor0" type="empty">
+        <property name="workspace0" type="empty">
+          <property name="color-style" type="int" value="0"/>
+          <property name="image-style" type="int" value="5"/>
+          <property name="last-image" type="string" value="/usr/share/backgrounds/draxion-rdp.png"/>
+        </property>
+      </property>
+      <property name="monitor1" type="empty">
         <property name="workspace0" type="empty">
           <property name="color-style" type="int" value="0"/>
           <property name="image-style" type="int" value="5"/>
@@ -124,6 +131,7 @@ RUN cat > /home/user/.config/xfce4/xfconf/xfce-perchannel-xml/xfwm4.xml << 'EOF'
 </channel>
 EOF
 
+# Desktop shortcuts
 RUN mkdir -p /home/user/Desktop && \
     cat > /home/user/Desktop/Telegram.desktop << 'EOF'
 [Desktop Entry]
@@ -149,10 +157,21 @@ Terminal=false
 Categories=Utility;Archiving;
 EOF
 
-RUN chmod +x /home/user/Desktop/*.desktop && \
-    chown -R user:user /home/user
+RUN chmod +x /home/user/Desktop/*.desktop
 
-RUN chown -R user:user /home/user/.config
+# Also set wallpaper using xfconf (extra force)
+RUN mkdir -p /home/user/.config/autostart && \
+    cat > /home/user/.config/autostart/set-wallpaper.desktop << 'EOF'
+[Desktop Entry]
+Type=Application
+Name=Set Wallpaper
+Exec=xfconf-query -c xfce4-desktop -p /backdrop/screen0/monitor0/workspace0/last-image -s /usr/share/backgrounds/draxion-rdp.png
+Hidden=false
+NoDisplay=false
+X-GNOME-Autostart-enabled=true
+EOF
+
+RUN chown -R user:user /home/user
 
 RUN echo "startxfce4" > /home/user/.xsession && chmod +x /home/user/.xsession
 RUN echo "#!/bin/sh\nexec startxfce4" > /etc/xrdp/startwm.sh && chmod +x /etc/xrdp/startwm.sh
