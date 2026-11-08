@@ -60,60 +60,52 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         libxml2-dev \
         libxmlsec1-dev \
         liblzma-dev \
+        imagemagick \
+        fonts-dejavu \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# Common Python modules (system-wide, python3.9)
 RUN pip3 install --no-cache-dir --upgrade pip setuptools wheel && \
     pip3 install --no-cache-dir \
-        requests \
-        numpy \
-        pandas \
-        flask \
-        pillow \
-        beautifulsoup4 \
-        lxml \
-        pyyaml \
-        rich \
-        tqdm \
-        python-dotenv
+        requests numpy pandas flask pillow beautifulsoup4 lxml \
+        pyyaml rich tqdm python-dotenv
 
-# ========== NEW: pyenv + latest Python 3.12 for user ==========
-ENV PYENV_ROOT="/home/user/.pyenv"
-ENV PATH="$PYENV_ROOT/bin:$PYENV_ROOT/shims:$PATH"
+# ========== CREATE USER draxion / PASSWORD draxion ==========
+RUN useradd -m -s /bin/bash draxion && \
+    echo "draxion:draxion" | chpasswd && \
+    adduser draxion sudo && \
+    echo "draxion ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
 
-RUN curl -fsSL https://pyenv.run | bash && \
-    echo 'export PYENV_ROOT="/home/user/.pyenv"' >> /home/user/.bashrc && \
-    echo 'export PATH="$PYENV_ROOT/bin:$PATH"' >> /home/user/.bashrc && \
-    echo 'eval "$(pyenv init -)"' >> /home/user/.bashrc
+# ========== NEW: pyenv + latest Python 3.12 for draxion ==========
+RUN su - draxion -c 'curl -fsSL https://pyenv.run | bash' && \
+    echo 'export PYENV_ROOT="$HOME/.pyenv"' >> /home/draxion/.bashrc && \
+    echo 'export PATH="$PYENV_ROOT/bin:$PATH"' >> /home/draxion/.bashrc && \
+    echo 'eval "$(pyenv init -)"' >> /home/draxion/.bashrc && \
+    echo 'eval "$(pyenv virtualenv-init -)"' >> /home/draxion/.bashrc
 
-# Install Python 3.12 via pyenv (for the user account)
-RUN su - user -c 'pyenv install 3.12.7 && pyenv global 3.12.7' && \
-    su - user -c 'pip install --no-cache-dir --upgrade pip setuptools wheel' && \
-    su - user -c 'pip install --no-cache-dir numpy pandas requests flask pillow beautifulsoup4 lxml pyyaml rich tqdm python-dotenv'
+RUN su - draxion -c 'source ~/.bashrc && pyenv install 3.12.7 && pyenv global 3.12.7'
+RUN su - draxion -c 'source ~/.bashrc && pip install --no-cache-dir --upgrade pip setuptools wheel && \
+    pip install --no-cache-dir numpy pandas requests flask pillow beautifulsoup4 lxml pyyaml rich tqdm python-dotenv'
 
-# Make `python` and `pip` point to the pyenv version for the user
-RUN echo 'alias python=python3' >> /home/user/.bashrc && \
-    echo 'alias pip=pip3' >> /home/user/.bashrc
+# ========== DOWNLOAD WALLPAPER + ADD @draxionnn WATERMARK ==========
+RUN mkdir -p /usr/share/backgrounds /home/draxion/Pictures && \
+    curl -k -L -o /usr/share/backgrounds/draxion-rdp-base.png \
+    "https://i.postimg.cc/2SMMW6Hd/Chat-GPT-Image-Sep-16-2026-07-21-05-PM.png"
 
-# ========== END NEW ==========
-
-RUN useradd -m -s /bin/bash user && \
-    echo "user:user" | chpasswd && \
-    adduser user sudo && \
-    echo "user ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
-
-# ========== DOWNLOAD WALLPAPER ==========
-RUN mkdir -p /usr/share/backgrounds /home/user/Pictures && \
-    curl -k -L -o /usr/share/backgrounds/draxion-rdp.png \
-    "https://i.postimg.cc/2SMMW6Hd/Chat-GPT-Image-Sep-16-2026-07-21-05-PM.png" && \
-    cp /usr/share/backgrounds/draxion-rdp.png /home/user/Pictures/ && \
+RUN convert /usr/share/backgrounds/draxion-rdp-base.png \
+    -gravity southeast \
+    -pointsize 42 \
+    -fill 'rgba(255,255,255,0.85)' \
+    -font DejaVu-Sans-Bold \
+    -annotate +40+40 '@draxionnn' \
+    /usr/share/backgrounds/draxion-rdp.png && \
+    cp /usr/share/backgrounds/draxion-rdp.png /home/draxion/Pictures/ && \
     chmod 644 /usr/share/backgrounds/draxion-rdp.png && \
-    chown user:user /home/user/Pictures/draxion-rdp.png
+    chown draxion:draxion /home/draxion/Pictures/draxion-rdp.png
 
 # ========== XFCE CONFIG ==========
-RUN mkdir -p /home/user/.config/xfce4/xfconf/xfce-perchannel-xml
+RUN mkdir -p /home/draxion/.config/xfce4/xfconf/xfce-perchannel-xml
 
-RUN cat > /home/user/.config/xfce4/xfconf/xfce-perchannel-xml/xsettings.xml << 'EOF'
+RUN cat > /home/draxion/.config/xfce4/xfconf/xfce-perchannel-xml/xsettings.xml << 'EOF'
 <?xml version="1.0" encoding="UTF-8"?>
 <channel name="xsettings" version="1.0">
   <property name="Net" type="empty">
@@ -123,7 +115,7 @@ RUN cat > /home/user/.config/xfce4/xfconf/xfce-perchannel-xml/xsettings.xml << '
 </channel>
 EOF
 
-RUN cat > /home/user/.config/xfce4/xfconf/xfce-perchannel-xml/xfce4-panel.xml << 'EOF'
+RUN cat > /home/draxion/.config/xfce4/xfconf/xfce-perchannel-xml/xfce4-panel.xml << 'EOF'
 <?xml version="1.0" encoding="UTF-8"?>
 <channel name="xfce4-panel" version="1.0">
   <property name="configver" type="int" value="2"/>
@@ -155,7 +147,7 @@ RUN cat > /home/user/.config/xfce4/xfconf/xfce-perchannel-xml/xfce4-panel.xml <<
 </channel>
 EOF
 
-RUN cat > /home/user/.config/xfce4/xfconf/xfce-perchannel-xml/xfce4-desktop.xml << 'EOF'
+RUN cat > /home/draxion/.config/xfce4/xfconf/xfce-perchannel-xml/xfce4-desktop.xml << 'EOF'
 <?xml version="1.0" encoding="UTF-8"?>
 <channel name="xfce4-desktop" version="1.0">
   <property name="backdrop" type="empty">
@@ -172,7 +164,7 @@ RUN cat > /home/user/.config/xfce4/xfconf/xfce-perchannel-xml/xfce4-desktop.xml 
 </channel>
 EOF
 
-RUN cat > /home/user/.config/xfce4/xfconf/xfce-perchannel-xml/xfwm4.xml << 'EOF'
+RUN cat > /home/draxion/.config/xfce4/xfconf/xfce-perchannel-xml/xfwm4.xml << 'EOF'
 <?xml version="1.0" encoding="UTF-8"?>
 <channel name="xfwm4" version="1.0">
   <property name="general" type="empty">
@@ -182,8 +174,8 @@ RUN cat > /home/user/.config/xfce4/xfconf/xfce-perchannel-xml/xfwm4.xml << 'EOF'
 EOF
 
 # Desktop shortcuts
-RUN mkdir -p /home/user/Desktop && \
-    cat > /home/user/Desktop/Telegram.desktop << 'EOF'
+RUN mkdir -p /home/draxion/Desktop && \
+    cat > /home/draxion/Desktop/Telegram.desktop << 'EOF'
 [Desktop Entry]
 Version=1.0
 Type=Application
@@ -195,7 +187,7 @@ Terminal=false
 Categories=Network;InstantMessaging;
 EOF
 
-RUN cat > /home/user/Desktop/Archive-Manager.desktop << 'EOF'
+RUN cat > /home/draxion/Desktop/Archive-Manager.desktop << 'EOF'
 [Desktop Entry]
 Version=1.0
 Type=Application
@@ -207,31 +199,31 @@ Terminal=false
 Categories=Utility;Archiving;
 EOF
 
-RUN chmod +x /home/user/Desktop/*.desktop
+RUN chmod +x /home/draxion/Desktop/*.desktop
 
 # Force wallpaper on every login
-RUN mkdir -p /home/user/.config/autostart && \
-    cat > /home/user/.config/autostart/force-wallpaper.sh << 'EOF'
+RUN mkdir -p /home/draxion/.config/autostart && \
+    cat > /home/draxion/.config/autostart/force-wallpaper.sh << 'EOF'
 #!/bin/bash
 sleep 3
 xfconf-query -c xfce4-desktop -p /backdrop/screen0/monitor0/workspace0/last-image -s /usr/share/backgrounds/draxion-rdp.png
 xfconf-query -c xfce4-desktop -p /backdrop/screen0/monitor0/workspace0/image-style -s 5
 EOF
 
-RUN chmod +x /home/user/.config/autostart/force-wallpaper.sh && \
-    cat > /home/user/.config/autostart/force-wallpaper.desktop << 'EOF'
+RUN chmod +x /home/draxion/.config/autostart/force-wallpaper.sh && \
+    cat > /home/draxion/.config/autostart/force-wallpaper.desktop << 'EOF'
 [Desktop Entry]
 Type=Application
 Name=Force Wallpaper
-Exec=/home/user/.config/autostart/force-wallpaper.sh
+Exec=/home/draxion/.config/autostart/force-wallpaper.sh
 Hidden=false
 NoDisplay=true
 X-GNOME-Autostart-enabled=true
 EOF
 
-RUN chown -R user:user /home/user
+RUN chown -R draxion:draxion /home/draxion
 
-RUN echo "startxfce4" > /home/user/.xsession && chmod +x /home/user/.xsession
+RUN echo "startxfce4" > /home/draxion/.xsession && chmod +x /home/draxion/.xsession
 RUN echo "#!/bin/sh\nexec startxfce4" > /etc/xrdp/startwm.sh && chmod +x /etc/xrdp/startwm.sh
 RUN sed -i 's/^allowed_users=.*/allowed_users=anybody/' /etc/X11/Xwrapper.config || \
     echo "allowed_users=anybody" >> /etc/X11/Xwrapper.config
