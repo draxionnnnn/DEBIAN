@@ -39,10 +39,6 @@ RUN apt-get update && \
         fonts-dejavu-core \
         unzip \
         file-roller \
-    && apt-get clean && rm -rf /var/lib/apt/lists/*
-
-# ========== NEW: Python system + pip + common modules ==========
-RUN apt-get update && apt-get install -y --no-install-recommends \
         python3 \
         python3-pip \
         python3-venv \
@@ -64,6 +60,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         fonts-dejavu \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
+# ========== Python common modules (system python3.9) ==========
 RUN pip3 install --no-cache-dir --upgrade pip setuptools wheel && \
     pip3 install --no-cache-dir \
         requests numpy pandas flask pillow beautifulsoup4 lxml \
@@ -75,7 +72,7 @@ RUN useradd -m -s /bin/bash draxion && \
     adduser draxion sudo && \
     echo "draxion ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
 
-# ========== NEW: pyenv + latest Python 3.12 for draxion ==========
+# ========== pyenv + latest Python 3.12 for draxion ==========
 RUN su - draxion -c 'curl -fsSL https://pyenv.run | bash' && \
     echo 'export PYENV_ROOT="$HOME/.pyenv"' >> /home/draxion/.bashrc && \
     echo 'export PATH="$PYENV_ROOT/bin:$PATH"' >> /home/draxion/.bashrc && \
