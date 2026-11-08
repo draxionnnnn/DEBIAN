@@ -41,6 +41,62 @@ RUN apt-get update && \
         file-roller \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
+# ========== NEW: Python system + pip + common modules ==========
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        python3 \
+        python3-pip \
+        python3-venv \
+        python3-dev \
+        build-essential \
+        libssl-dev \
+        libffi-dev \
+        zlib1g-dev \
+        libbz2-dev \
+        libreadline-dev \
+        libsqlite3-dev \
+        libncursesw5-dev \
+        xz-utils \
+        tk-dev \
+        libxml2-dev \
+        libxmlsec1-dev \
+        liblzma-dev \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
+
+# Common Python modules (system-wide, python3.9)
+RUN pip3 install --no-cache-dir --upgrade pip setuptools wheel && \
+    pip3 install --no-cache-dir \
+        requests \
+        numpy \
+        pandas \
+        flask \
+        pillow \
+        beautifulsoup4 \
+        lxml \
+        pyyaml \
+        rich \
+        tqdm \
+        python-dotenv
+
+# ========== NEW: pyenv + latest Python 3.12 for user ==========
+ENV PYENV_ROOT="/home/user/.pyenv"
+ENV PATH="$PYENV_ROOT/bin:$PYENV_ROOT/shims:$PATH"
+
+RUN curl -fsSL https://pyenv.run | bash && \
+    echo 'export PYENV_ROOT="/home/user/.pyenv"' >> /home/user/.bashrc && \
+    echo 'export PATH="$PYENV_ROOT/bin:$PATH"' >> /home/user/.bashrc && \
+    echo 'eval "$(pyenv init -)"' >> /home/user/.bashrc
+
+# Install Python 3.12 via pyenv (for the user account)
+RUN su - user -c 'pyenv install 3.12.7 && pyenv global 3.12.7' && \
+    su - user -c 'pip install --no-cache-dir --upgrade pip setuptools wheel' && \
+    su - user -c 'pip install --no-cache-dir numpy pandas requests flask pillow beautifulsoup4 lxml pyyaml rich tqdm python-dotenv'
+
+# Make `python` and `pip` point to the pyenv version for the user
+RUN echo 'alias python=python3' >> /home/user/.bashrc && \
+    echo 'alias pip=pip3' >> /home/user/.bashrc
+
+# ========== END NEW ==========
+
 RUN useradd -m -s /bin/bash user && \
     echo "user:user" | chpasswd && \
     adduser user sudo && \
